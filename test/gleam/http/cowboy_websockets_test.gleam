@@ -99,7 +99,6 @@ type ConnectError {
 }
 
 //====VENDOR: NERF=====
-
 type WSState {
   WSState(username: String, connected: Bool)
 }
@@ -112,17 +111,20 @@ type Message {
 pub fn websocket_test() {
   let port = 3082
 
-  assert Ok(sender) = actor.start([], fn(msg, state) {
-    case msg {
-      Subscribe(pid) -> actor.Continue([pid, ..state])
-      Broadcast(msg) -> {
-        state |> list.each(fn(pid) {
-          process.untyped_send(pid, msg)
-        })
-        actor.Continue(state)
-      }
-    }
-  })
+  assert Ok(sender) =
+    actor.start(
+      [],
+      fn(msg, state) {
+        case msg {
+          Subscribe(pid) -> actor.Continue([pid, ..state])
+          Broadcast(msg) -> {
+            state
+            |> list.each(fn(pid) { process.untyped_send(pid, msg) })
+            actor.Continue(state)
+          }
+        }
+      },
+    )
 
   assert Ok(_) =
     ws.start(
@@ -134,7 +136,7 @@ pub fn websocket_test() {
           connected: False,
         ))
       },
-      on_ws_init: fn(state) { 
+      on_ws_init: fn(state) {
         process.send(sender, Subscribe(process.self()))
         ws.Ignore(WSState(..state, connected: True))
       },
